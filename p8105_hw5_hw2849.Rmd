@@ -134,16 +134,18 @@ homicide_df %>%
 
 ## Problem 2
 
+Create a tidy dataframe containing data from all participants, including the subject ID, arm, and observations over time:
+
 ```{r}
 files = list.files("./data/", full.names = TRUE) %>% ## import files with relative path
   map(read_csv) ## iterate over file names
 
 for (i in 1:20) { ## separate control and experiment
-  if (i < 11) { ## add study id and arm con
+  if (i < 11) { ## add arm con and relative study id
     files[[i]] <- files[[i]] %>% 
       mutate(arm = "Con", 
              study_id = i)
-  } else if (i > 10) { ## add arm exp
+  } else if (i > 10) { ## add arm exp and add relative study id
     files[[i]] <- files[[i]] %>% 
       mutate(arm = "Exp", 
              study_id = i - 10)
@@ -151,7 +153,7 @@ for (i in 1:20) { ## separate control and experiment
 }
 
 final_df = files %>% 
-  bind_rows() %>% 
+  bind_rows() %>% ## stack each study into one data frame
   pivot_longer( ## make a readable table
     week_1:week_8,
     names_to = "week",
@@ -162,7 +164,7 @@ final_df = files %>%
    week = as.numeric(week),
    study_id = as.character(study_id)
   ) %>% 
-  arrange(week, study_id) 
+  print()
 ```
 
 First, using `list.files` to import the list of files and file names, then using `map` to read all .csv files with relative path, and saved to `files`. Next, writing a function to separate the control and experiment, and adding `study_id` for each subject. Lastly, stack each subject into one data frame `final_df` and tidy the data.  
@@ -171,7 +173,6 @@ Now, make a spaghetti plot showing trends on observations for each subject over 
 
 ```{r}
 final_df %>% 
-  group_by(arm, study_id) %>% 
   ggplot(aes(x = week, y = obs_value, color = arm, type = study_id)) + 
   geom_line() + 
   labs(
@@ -186,13 +187,34 @@ final_df %>%
 From the spaghetti plot, we observed that generally participants assigned to `exp` group have a higher value than those who assigned to `con` group over time. In addition, `exp` group shows an increasing trend while `con` group remain constant across the study period.
 
 ## Problem 3
+
+Load and tidy `iris`, and filling in the missing values. 
+
 ```{r}
 set.seed(10)
 
 iris_with_missing = iris %>% 
   map_df(~replace(.x, sample(1:150, 20), NA)) %>%
   mutate(Species = as.character(Species))
+
+## filling the missing values
+clean_data = function(x){ 
+  
+  if (is.numeric(x)) { ## if the value is NA, replace by mean of x
+    x = replace_na(x, mean(x, na.rm = TRUE))
+  } 
+  
+  else if (is.character(x)) { ## if the species is NA replace by virginica
+    x = replace_na(x, "virginica")
+  }
+}
+
+iris = map_df(iris_with_missing, clean_data) %>% 
+  as_tibble() %>% print()
 ```
+
+To filling the missing values for `iris`, we consider in two cases: numeric variables and character variables. And so we wrote a function that filling in missing values with the mean of non-missing values; and replace `NA` with `virginica` for character variables. 
+
 
 
 
